@@ -1,51 +1,67 @@
 # srvcs-abs
 
-The absolute-value orchestrator of the srvcs.cloud distributed standard library.
+## Name
 
-Its single concern: **the absolute value of a number.** It does no arithmetic of
-its own. It asks [`srvcs-isnegative`](https://github.com/srvcs/isnegative)
-whether `value` is negative; if so, it asks
-[`srvcs-negate`](https://github.com/srvcs/negate) to flip the sign and returns
-that. Otherwise the value is already its own absolute value.
+| Field | Value |
+| --- | --- |
+| Service | `srvcs-abs` |
+| Slug | `abs` |
+| Repository | `srvcs/abs` |
+| Package | `srvcs-abs` |
+| Kind | `orchestrator` |
+
+## Function
+
+absolute value
+
+## Dependencies
+
+| Dependency | Repository |
+| --- | --- |
+| `srvcs-isnegative` | [srvcs/isnegative](https://github.com/srvcs/isnegative) |
+| `srvcs-negate` | [srvcs/negate](https://github.com/srvcs/negate) |
 
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/` | Service identity, concern, and dependency list |
-| `POST` | `/` | Absolute value of `value` |
-| `GET` | `/healthz` `/readyz` `/metrics` `/openapi.json` | srvcs service standard surface |
+| `GET` | `/` | Service identity |
+| `POST` | `/` | Evaluate the service function |
+| `GET` | `/healthz` | Liveness probe |
+| `GET` | `/readyz` | Readiness probe |
+| `GET` | `/metrics` | Prometheus metrics |
+| `GET` | `/openapi.json` | OpenAPI document |
 
-```sh
-curl -s -X POST localhost:8080/ -H 'content-type: application/json' -d '{"value": -6}'
-# {"value":-6,"result":6}
-```
+## Inputs
 
-Responses:
+| Name | Type | Required |
+| --- | --- | --- |
+| `value` | `json` | yes |
 
-- `200 {"value": n, "result": |n|}` — evaluated.
-- `422` — invalid input, forwarded from a leaf dependency.
-- `503` — a dependency is unavailable.
+## Outputs
 
-## Dependencies
-
-- [`srvcs-isnegative`](https://github.com/srvcs/isnegative)
-- [`srvcs-negate`](https://github.com/srvcs/negate)
-
-Input validation propagates from the leaf dependencies via their `422`
-responses — this service does not depend on `srvcs-isnumber` directly.
+| Name | Type |
+| --- | --- |
+| `value` | `json` |
+| `result` | `json` |
 
 ## Configuration
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `SRVCS_BIND_ADDR` | `0.0.0.0:8080` | Bind address |
-| `SRVCS_ISNEGATIVE_URL` | `http://127.0.0.1:8084` | Base URL of `srvcs-isnegative` |
-| `SRVCS_NEGATE_URL` | `http://127.0.0.1:8085` | Base URL of `srvcs-negate` |
 | `SRVCS_ENV` | `development` | Environment label for logs |
 | `RUST_LOG` | `info,tower_http=info` | Tracing filter |
+| `SRVCS_ISNEGATIVE_URL` | `http://127.0.0.1:8084` | Base URL for srvcs-isnegative |
+| `SRVCS_NEGATE_URL` | `http://127.0.0.1:8085` | Base URL for srvcs-negate |
 
-## Local checks
+## Error Behavior
+
+- `422` means the request could not be evaluated for the documented input shape.
+- `503` means a required dependency was unavailable or returned an unexpected response.
+- Dependency validation errors are forwarded when this service delegates validation.
+
+## Local Checks
 
 ```sh
 cargo fmt --check
@@ -53,10 +69,8 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-Orchestration tests stand up mock `srvcs-isnegative` and `srvcs-negate` services
-in-process, including the degraded (`503`) and forwarded-invalid-input (`422`)
-cases. See [`srvcs/platform`](https://github.com/srvcs/platform) for the shared
-standard.
+See the [srvcs service standard](https://github.com/srvcs/platform/blob/main/STANDARD.md) for the full operational contract.
 
-> Note: the `cargoHash` in `flake.nix` is inherited from the template and must be
-> refreshed with a `nix build` before the Nix gates pass.
+## Metadata
+
+Machine-readable service metadata lives in `srvcs.yaml`. Keep it aligned with this README when the service contract changes.
